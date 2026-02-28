@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My History Pro</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f5f0;
+    --surface: #ffffff;
+    --surface2: #f0f0ea;
+    --border: #e0e0d8;
+    --text: #1a1a1a;
+    --text2: #666660;
+    --accent: #2d5be3;
+    --accent2: #e32d5b;
+    --shadow: 0 2px 12px rgba(0,0,0,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    background: var(--bg); color: var(--text);
+    min-height: 100vh; font-size: 14px;
+  }
+
+  /* ===== LOADING ===== */
+  #loadingScreen {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #1a237e 0%, #1565c0 100%);
+    color: white;
+  }
+  .loading-logo { font-size: 56px; margin-bottom: 16px; }
+  .loading-title {
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+    font-size: 24px; font-weight: 700; margin-bottom: 32px;
+  }
+  .spinner {
+    width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.3);
+    border-top-color: white; border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ===== LOGIN ===== */
+  #loginScreen {
+    display: none; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 100vh; padding: 24px;
+    background: linear-gradient(135deg, #1a237e 0%, #283593 50%, #1565c0 100%);
+  }
+  .login-box {
+    background: white; border-radius: 20px; padding: 40px 32px;
+    width: 100%; max-width: 380px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  }
+  .login-logo { text-align: center; margin-bottom: 32px; }
+  .login-logo h1 {
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+    font-size: 22px; font-weight: 700; color: #1a237e; margin-top: 12px;
+  }
+  .login-logo .icon { font-size: 48px; }
+  .btn-google {
+    width: 100%; background: white; color: #333;
+    border: 1.5px solid #e0e0e0; border-radius: 10px;
+    padding: 14px; font-size: 15px; font-weight: 500; cursor: pointer;
+    font-family: 'Noto Sans JP', sans-serif;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    transition: all 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    margin-bottom: 12px;
+  }
+  .btn-google:hover { background: #f8f8f8; box-shadow: 0 4px 16px rgba(0,0,0,0.12); }
+  .btn-google img { width: 20px; height: 20px; }
+  .login-divider {
+    display: flex; align-items: center; gap: 12px; margin: 16px 0;
+    color: #aaa; font-size: 12px;
+  }
+  .login-divider::before, .login-divider::after {
+    content: ''; flex: 1; height: 1px; background: #e0e0e0;
+  }
+  .login-box label { display: block; font-size: 12px; color: #666; margin-bottom: 6px; font-weight: 500; }
+  .login-box input[type=text], .login-box input[type=password], .login-box input[type=email] {
+    width: 100%; border: 1.5px solid #e0e0e0; border-radius: 10px;
+    padding: 12px 14px; font-size: 15px; outline: none; margin-bottom: 14px;
+    font-family: 'Noto Sans JP', sans-serif; transition: border-color 0.2s;
+  }
+  .login-box input:focus { border-color: var(--accent); }
+  .btn-login {
+    width: 100%; background: linear-gradient(135deg, #1a237e, #1565c0);
+    color: white; border: none; border-radius: 10px;
+    padding: 14px; font-size: 15px; font-weight: 700; cursor: pointer;
+    font-family: 'Noto Sans JP', sans-serif; transition: opacity 0.2s;
+  }
+  .btn-login:hover { opacity: 0.9; }
+  .login-error { color: #e32d5b; font-size: 12px; text-align: center; margin-top: 10px; display: none; }
+  .login-tabs {
+    display: flex; margin-bottom: 20px; background: #f5f5f5;
+    border-radius: 10px; padding: 4px;
+  }
+  .login-tab {
+    flex: 1; padding: 8px; text-align: center; border-radius: 8px; cursor: pointer;
+    font-size: 13px; font-weight: 500; color: #666; transition: all 0.2s;
+  }
+  .login-tab.active { background: white; color: #1a237e; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+
+  /* ===== APP ===== */
+  #app { display: none; min-height: 100vh; }
+
+  .header {
+    position: sticky; top: 0; z-index: 100;
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 0 16px;
+    display: flex; align-items: center; height: 56px; gap: 12px;
+    box-shadow: var(--shadow);
+  }
+  .header-title {
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+    font-size: 17px; font-weight: 700; flex: 1; text-align: center;
+  }
+  .hamburger {
+    width: 40px; height: 40px; display: flex; flex-direction: column;
+    justify-content: center; align-items: center; gap: 5px; cursor: pointer;
+    border: none; background: none; border-radius: 8px;
+  }
+  .hamburger span {
+    display: block; width: 22px; height: 2px; background: var(--accent);
+    border-radius: 2px;
+  }
+  .btn-cat {
+    background: var(--accent); color: white; border: none; border-radius: 8px;
+    padding: 6px 12px; font-size: 13px; font-weight: 500; cursor: pointer;
+    font-family: 'Noto Sans JP', sans-serif;
+  }
+
+  /* Drawer */
+  .drawer-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200;
+  }
+  .drawer-overlay.open { display: block; }
+  .drawer {
+    position: fixed; left: -280px; top: 0; bottom: 0; width: 280px;
+    background: var(--surface); z-index: 201; transition: left 0.3s ease;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.15);
+  }
+  .drawer.open { left: 0; }
+  .drawer-header {
+    background: linear-gradient(135deg, #1a237e, #1565c0);
+    padding: 48px 20px 20px; color: white;
+  }
+  .drawer-avatar {
+    width: 48px; height: 48px; border-radius: 50%; margin-bottom: 10px;
+    border: 2px solid rgba(255,255,255,0.5);
+  }
+  .drawer-user { font-size: 16px; font-weight: 700; }
+  .drawer-email { font-size: 11px; opacity: 0.8; margin-top: 2px; }
+  .drawer-menu { padding: 8px 0; }
+  .drawer-item {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 20px; cursor: pointer; color: var(--text);
+    transition: background 0.15s; font-size: 15px;
+    border: none; background: none; width: 100%; text-align: left;
+    font-family: 'Noto Sans JP', sans-serif;
+  }
+  .drawer-item:hover { background: var(--surface2); }
+  .drawer-item .di-icon { font-size: 18px; width: 24px; }
+  .drawer-sep { height: 1px; background: var(--border); margin: 8px 0; }
+
+  /* Search */
+  .search-bar {
+    padding: 12px 16px; background: var(--surface); border-bottom: 1px solid var(--border);
+  }
+  .search-bar input {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 14px; font-size: 14px; outline: none;
+    font-family: 'Noto Sans JP', sans-serif; color: var(--text);
+  }
+  .search-bar input:focus { border-color: var(--accent); }
+
+  /* List */
+  .main-content { padding-bottom: 80px; }
+  .record-item {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 12px 16px; cursor: pointer; transition: background 0.15s;
+    display: flex; align-items: flex-start; gap: 12px;
+  }
+  .record-item:hover { background: var(--surface2); }
+  .record-meta { flex: 1; min-width: 0; }
+  .record-date-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
+  .date-badge {
+    display: inline-block; border-radius: 6px; padding: 2px 10px;
+    font-size: 12px; font-weight: 700; white-space: nowrap; color: #1a1a1a;
+  }
+  .rokuyo { font-size: 11px; color: var(--text2); }
+  .record-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+  .record-elapsed { font-size: 12px; color: var(--text2); text-align: right; white-space: nowrap; }
+  .record-elapsed.future { color: var(--accent); }
+  .chevron { color: #ccc; font-size: 14px; margin-top: 4px; }
+
+  /* Bottom bar */
+  .bottom-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: var(--surface); border-top: 1px solid var(--border);
+    padding: 8px 16px; display: flex; align-items: center; justify-content: space-between;
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.08);
+  }
+  .sort-info { display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--text2); }
+  .btn-add {
+    width: 48px; height: 48px; background: var(--accent); color: white;
+    border: none; border-radius: 50%; font-size: 26px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 16px rgba(45,91,227,0.4); transition: transform 0.2s;
+  }
+  .btn-add:hover { transform: scale(1.1); }
+
+  /* Modal */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    z-index: 300; align-items: flex-end; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface); border-radius: 20px 20px 0 0;
+    width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto;
+    animation: slideUp 0.3s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .modal-header {
+    display: flex; align-items: center; padding: 16px;
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; background: var(--surface); z-index: 1;
+  }
+  .modal-header h2 { flex: 1; text-align: center; font-size: 16px; font-weight: 700; }
+  .btn-modal-back, .btn-modal-save {
+    background: none; border: none; cursor: pointer;
+    font-family: 'Noto Sans JP', sans-serif; font-size: 14px;
+    padding: 6px 10px; border-radius: 8px;
+  }
+  .btn-modal-back { color: var(--text2); background: var(--surface2); }
+  .btn-modal-save { color: white; background: var(--accent); font-weight: 700; }
+  .form-section { padding: 16px; }
+  .form-row { margin-bottom: 20px; }
+  .form-label { font-size: 12px; color: var(--text2); font-weight: 500; margin-bottom: 6px; display: block; }
+  .form-input {
+    width: 100%; border: 1.5px solid var(--border); border-radius: 10px;
+    padding: 10px 14px; font-size: 15px; outline: none;
+    font-family: 'Noto Sans JP', sans-serif; background: var(--surface);
+    color: var(--text); transition: border-color 0.2s;
+  }
+  .form-input:focus { border-color: var(--accent); }
+  .cat-select {
+    display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+    border: 1.5px solid var(--border); border-radius: 10px; cursor: pointer;
+  }
+  .cat-dot { width: 20px; height: 20px; border-radius: 5px; flex-shrink: 0; }
+  .cat-name { flex: 1; font-size: 15px; }
+
+  /* Cat picker */
+  .cat-picker {
+    display: none; position: fixed; inset: 0; z-index: 500;
+    background: rgba(0,0,0,0.5); align-items: flex-end;
+  }
+  .cat-picker.open { display: flex; }
+  .cat-picker-box {
+    background: var(--surface); border-radius: 20px 20px 0 0;
+    width: 100%; max-width: 600px; margin: 0 auto;
+    max-height: 70vh; overflow-y: auto; animation: slideUp 0.3s ease;
+  }
+  .cat-picker-header {
+    display: flex; align-items: center; padding: 16px;
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; background: var(--surface);
+  }
+  .cat-picker-header h3 { flex: 1; text-align: center; font-size: 16px; font-weight: 700; }
+  .cp-close, .cp-done {
+    background: none; border: none; cursor: pointer; font-size: 14px;
+    padding: 6px 10px; border-radius: 8px; font-family: 'Noto Sans JP', sans-serif;
+  }
+  .cp-close { color: var(--accent2); font-size: 20px; }
+  .cp-done { background: var(--surface2); color: var(--accent); font-weight: 700; }
+  .cat-picker-item {
+    display: flex; align-items: center; gap: 14px; padding: 14px 16px;
+    border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.15s;
+  }
+  .cat-picker-item:hover { background: var(--surface2); }
+  .cp-check { color: var(--accent); font-size: 18px; margin-left: auto; }
+
+  /* Cat filter */
+  .cat-filter-modal {
+    display: none; position: fixed; inset: 0; z-index: 400;
+    background: rgba(0,0,0,0.5); align-items: flex-end;
+  }
+  .cat-filter-modal.open { display: flex; }
+  .cat-filter-box {
+    background: var(--surface); border-radius: 20px 20px 0 0;
+    width: 100%; max-width: 600px; margin: 0 auto;
+    max-height: 80vh; overflow-y: auto; animation: slideUp 0.3s ease;
+  }
+  .cfm-header {
+    display: flex; align-items: center; padding: 16px;
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; background: var(--surface);
+  }
+  .cfm-header h3 { flex: 1; text-align: center; font-size: 16px; font-weight: 700; }
+  .cfm-close, .cfm-done {
+    background: none; border: none; cursor: pointer; font-size: 14px;
+    padding: 6px 10px; border-radius: 8px; font-family: 'Noto Sans JP', sans-serif;
+  }
+  .cfm-close { color: var(--accent2); font-size: 20px; }
+  .cfm-done { background: var(--surface2); color: var(--accent); font-weight: 700; }
+  .cfm-item {
+    display: flex; align-items: center; gap: 14px; padding: 14px 16px;
+    border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.15s;
+  }
+  .cfm-item:hover { background: var(--surface2); }
+  .cfm-check { color: var(--accent); font-size: 18px; margin-left: auto; }
+
+  /* Cat manage */
+  .cat-manage-item {
+    display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .color-swatch {
+    width: 32px; height: 32px; border-radius: 8px; cursor: pointer;
+    transition: transform 0.15s; flex-shrink: 0; border: 2px solid transparent;
+  }
+  .color-swatch:hover { transform: scale(1.1); }
+  .btn-del-cat {
+    background: none; border: none; color: var(--accent2);
+    font-size: 20px; cursor: pointer; padding: 4px 8px;
+  }
+
+  /* Sort */
+  .sort-modal {
+    display: none; position: fixed; inset: 0; z-index: 400;
+    background: rgba(0,0,0,0.5); align-items: flex-end;
+  }
+  .sort-modal.open { display: flex; }
+  .sort-modal-box {
+    background: var(--surface); border-radius: 16px 16px 0 0;
+    width: 100%; max-width: 600px; margin: 0 auto;
+    padding: 20px 16px 32px; animation: slideUp 0.3s ease;
+  }
+  .sort-modal-box h3 { font-size: 16px; font-weight: 700; margin-bottom: 16px; text-align: center; }
+  .sort-option {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 0; border-bottom: 1px solid var(--border); cursor: pointer; font-size: 14px;
+  }
+  .sort-option:last-child { border-bottom: none; }
+  .sort-check { color: var(--accent); font-size: 18px; }
+
+  /* Color picker */
+  .color-picker-popup {
+    display: none; position: fixed; z-index: 600;
+    background: white; border-radius: 12px; padding: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2); flex-wrap: wrap; gap: 8px; width: 200px;
+  }
+  .color-picker-popup.open { display: flex; }
+  .cp-color {
+    width: 32px; height: 32px; border-radius: 8px; cursor: pointer;
+    transition: transform 0.15s; border: 2px solid transparent;
+  }
+  .cp-color:hover { transform: scale(1.15); }
+  .cp-color.selected { border-color: #333; }
+
+  /* Sync indicator */
+  .sync-badge {
+    position: fixed; top: 64px; right: 16px; z-index: 99;
+    background: #22c55e; color: white; border-radius: 20px;
+    padding: 4px 12px; font-size: 11px; font-weight: 700;
+    opacity: 0; transition: opacity 0.3s; pointer-events: none;
+  }
+  .sync-badge.show { opacity: 1; }
+  .sync-badge.error { background: var(--accent2); }
+
+  .empty-state {
+    text-align: center; padding: 60px 20px; color: var(--text2);
+  }
+  .empty-state .es-icon { font-size: 48px; margin-bottom: 16px; }
+  .empty-state h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; color: var(--text); }
+
+  @media (min-width: 600px) {
+    .modal, .sort-modal-box, .cat-filter-box, .cat-picker-box {
+      border-radius: 20px; margin-bottom: 24px;
+    }
+    .modal-overlay, .sort-modal, .cat-filter-modal, .cat-picker { align-items: center; }
+    .bottom-bar { max-width: 600px; left: 50%; transform: translateX(-50%); border-radius: 16px 16px 0 0; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Loading -->
+<div id="loadingScreen">
+  <div class="loading-logo">📅</div>
+  <div class="loading-title">My History Pro</div>
+  <div class="spinner"></div>
+</div>
+
+<!-- Login -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="icon">📅</div>
+      <h1>My History Pro</h1>
+    </div>
+
+    <!-- Google Login -->
+    <button class="btn-google" onclick="loginWithGoogle()">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+      Googleでログイン
+    </button>
+
+    <div class="login-divider">または</div>
+
+    <!-- Email/Password tabs -->
+    <div class="login-tabs">
+      <div class="login-tab active" onclick="switchTab('login')">ログイン</div>
+      <div class="login-tab" onclick="switchTab('register')">新規登録</div>
+    </div>
+
+    <div id="loginForm">
+      <label>メールアドレス</label>
+      <input type="email" id="loginEmail" placeholder="email@example.com">
+      <label>パスワード</label>
+      <input type="password" id="loginPass" placeholder="パスワードを入力">
+      <button class="btn-login" onclick="loginWithEmail()">ログイン</button>
+    </div>
+
+    <div id="registerForm" style="display:none">
+      <label>メールアドレス</label>
+      <input type="email" id="regEmail" placeholder="email@example.com">
+      <label>パスワード（6文字以上）</label>
+      <input type="password" id="regPass" placeholder="パスワードを入力">
+      <button class="btn-login" onclick="registerWithEmail()">アカウント作成</button>
+    </div>
+
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+
+<!-- App -->
+<div id="app">
+  <div class="header">
+    <button class="hamburger" onclick="toggleDrawer()">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="header-title">履歴</div>
+    <button class="btn-cat" onclick="openCatFilter()">カテゴリー</button>
+  </div>
+
+  <div class="search-bar">
+    <input type="text" id="searchInput" placeholder="🔍 検索" oninput="renderList()">
+  </div>
+
+  <div class="main-content">
+    <div id="recordList"></div>
+  </div>
+
+  <div class="bottom-bar">
+    <div class="sort-info" onclick="openSortModal()">
+      <span style="font-size:20px">⚙️</span>
+      <div>
+        <span id="sortLabel1" style="font-size:11px">年、月、日</span><br>
+        <span id="sortLabel2" style="font-size:11px">降順</span>
+      </div>
+    </div>
+    <button class="btn-add" onclick="openAddModal()">＋</button>
+  </div>
+</div>
+
+<!-- Sync badge -->
+<div class="sync-badge" id="syncBadge">✓ 同期完了</div>
+
+<!-- Drawer -->
+<div class="drawer-overlay" id="drawerOverlay" onclick="toggleDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-header">
+    <img class="drawer-avatar" id="drawerAvatar" src="" alt="" style="display:none">
+    <div class="drawer-user" id="drawerUser">ユーザー</div>
+    <div class="drawer-email" id="drawerEmail"></div>
+  </div>
+  <div class="drawer-menu">
+    <button class="drawer-item" onclick="closeDrawer()"><span class="di-icon">📋</span>履歴</button>
+    <button class="drawer-item" onclick="openCatManage(); closeDrawer();"><span class="di-icon">🗂️</span>カテゴリー編集</button>
+    <button class="drawer-item" onclick="exportData(); closeDrawer();"><span class="di-icon">📤</span>エクスポート</button>
+    <div class="drawer-sep"></div>
+    <button class="drawer-item" onclick="doLogout()"><span class="di-icon">🚪</span>ログアウト</button>
+    <div style="padding:14px 20px;font-size:12px;color:#aaa">Ver. 2.0.0 (Firebase)</div>
+  </div>
+</div>
+
+<!-- Record Modal -->
+<div class="modal-overlay" id="recordModal" onclick="if(event.target===this)closeRecordModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <button class="btn-modal-back" onclick="closeRecordModal()">履歴</button>
+      <h2 id="modalTitle">新規追加</h2>
+      <button class="btn-modal-save" onclick="saveRecord()">保存</button>
+    </div>
+    <div class="form-section">
+      <div class="form-row">
+        <span class="form-label">カテゴリー</span>
+        <div class="cat-select" onclick="openCatPicker()">
+          <div class="cat-dot" id="formCatDot" style="background:#5b9af5"></div>
+          <span class="cat-name" id="formCatName">未分類</span>
+          <span style="color:#ccc">›</span>
+        </div>
+      </div>
+      <div class="form-row">
+        <span class="form-label">件名</span>
+        <input class="form-input" id="formTitle" placeholder="件名を入力" type="text">
+      </div>
+      <div class="form-row">
+        <span class="form-label">日付</span>
+        <input class="form-input" id="formDate" type="date">
+      </div>
+      <div class="form-row">
+        <span class="form-label">メモ</span>
+        <textarea class="form-input" id="formMemo" rows="3" placeholder="メモを入力" style="resize:vertical"></textarea>
+      </div>
+    </div>
+    <div style="display:flex;gap:12px;padding:0 16px 24px" id="modalActions">
+      <button onclick="deleteRecord()" style="flex:1;padding:12px;background:none;border:1.5px solid var(--accent2);border-radius:10px;color:var(--accent2);cursor:pointer;font-size:14px;font-family:'Noto Sans JP',sans-serif;">🗑 削除</button>
+      <button onclick="copyRecord()" style="flex:1;padding:12px;background:none;border:1.5px solid var(--accent);border-radius:10px;color:var(--accent);cursor:pointer;font-size:14px;font-family:'Noto Sans JP',sans-serif;">📋 コピー</button>
+    </div>
+  </div>
+</div>
+
+<!-- Cat Picker -->
+<div class="cat-picker" id="catPicker" onclick="if(event.target===this)closeCatPicker()">
+  <div class="cat-picker-box">
+    <div class="cat-picker-header">
+      <button class="cp-close" onclick="closeCatPicker()">✕</button>
+      <h3>カテゴリー</h3>
+      <button class="cp-done" onclick="closeCatPicker()">完了</button>
+    </div>
+    <div id="catPickerList"></div>
+  </div>
+</div>
+
+<!-- Cat Filter -->
+<div class="cat-filter-modal" id="catFilterModal" onclick="if(event.target===this)closeCatFilter()">
+  <div class="cat-filter-box">
+    <div class="cfm-header">
+      <button class="cfm-close" onclick="closeCatFilter()">✕</button>
+      <h3>カテゴリー</h3>
+      <button class="cfm-done" onclick="closeCatFilter()">完了</button>
+    </div>
+    <div id="catFilterList"></div>
+  </div>
+</div>
+
+<!-- Cat Manage -->
+<div class="modal-overlay" id="catManageModal" onclick="if(event.target===this)closeCatManage()">
+  <div class="modal">
+    <div class="modal-header">
+      <button class="btn-modal-back" onclick="closeCatManage()">✕</button>
+      <h2>カテゴリー編集</h2>
+      <button class="btn-modal-save" onclick="addNewCategory()">追加</button>
+    </div>
+    <div id="catManageList"></div>
+  </div>
+</div>
+
+<!-- Sort Modal -->
+<div class="sort-modal" id="sortModal" onclick="if(event.target===this)document.getElementById('sortModal').classList.remove('open')">
+  <div class="sort-modal-box">
+    <h3>並べ替え</h3>
+    <div class="sort-option" onclick="setSort('date','desc')">
+      <span>日付（新しい順）</span><span class="sort-check" id="sort-date-desc">✓</span>
+    </div>
+    <div class="sort-option" onclick="setSort('date','asc')">
+      <span>日付（古い順）</span><span class="sort-check" id="sort-date-asc" style="display:none">✓</span>
+    </div>
+    <div class="sort-option" onclick="setSort('title','asc')">
+      <span>件名（昇順）</span><span class="sort-check" id="sort-title-asc" style="display:none">✓</span>
+    </div>
+    <div class="sort-option" onclick="setSort('title','desc')">
+      <span>件名（降順）</span><span class="sort-check" id="sort-title-desc" style="display:none">✓</span>
+    </div>
+  </div>
+</div>
+
+<!-- Color Picker -->
+<div class="color-picker-popup" id="colorPickerPopup"></div>
+
+<!-- Firebase SDKs -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, collection, doc, setDoc, getDoc, onSnapshot, deleteDoc, query, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCZo9PsRWpHZLcH7pd5JVycGwKiD8f6ru8",
+  authDomain: "my-history-pro.firebaseapp.com",
+  projectId: "my-history-pro",
+  storageBucket: "my-history-pro.firebasestorage.app",
+  messagingSenderId: "419848651656",
+  appId: "1:419848651656:web:e6d445a0921a35a46b703d"
+};
+
+const fbApp = initializeApp(firebaseConfig);
+const auth = getAuth(fbApp);
+const db = getFirestore(fbApp);
+const googleProvider = new GoogleAuthProvider();
+
+// ====== GLOBALS ======
+const COLORS = ['#f5c800','#2563eb','#5b9af5','#7ec832','#ccf024','#22d3ee','#22c55e','#ef4444','#a855f7','#f97316','#ec4899','#84cc16'];
+const ROKUYO = ['大安','赤口','先勝','友引','先負','仏滅'];
+let currentUser = null;
+let records = [];
+let categories = [];
+let selectedCatId = null;
+let filterCatIds = null;
+let sortKey = 'date', sortDir = 'desc';
+let editingId = null;
+let colorPickerTarget = null;
+let unsubRecords = null, unsubCats = null;
+
+// ====== AUTH ======
+window.loginWithGoogle = async () => {
+  try {
+    await signInWithPopup(auth, googleProvider);
+  } catch(e) { showError(getErrMsg(e)); }
+};
+
+window.loginWithEmail = async () => {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  if(!email||!pass) return showError('メールアドレスとパスワードを入力してください');
+  try {
+    await signInWithEmailAndPassword(auth, email, pass);
+  } catch(e) { showError(getErrMsg(e)); }
+};
+
+window.registerWithEmail = async () => {
+  const email = document.getElementById('regEmail').value.trim();
+  const pass = document.getElementById('regPass').value;
+  if(!email||!pass) return showError('メールアドレスとパスワードを入力してください');
+  if(pass.length < 6) return showError('パスワードは6文字以上にしてください');
+  try {
+    await createUserWithEmailAndPassword(auth, email, pass);
+  } catch(e) { showError(getErrMsg(e)); }
+};
+
+window.doLogout = async () => {
+  if(unsubRecords) unsubRecords();
+  if(unsubCats) unsubCats();
+  await signOut(auth);
+  closeDrawer();
+};
+
+function getErrMsg(e) {
+  const msgs = {
+    'auth/email-already-in-use': 'このメールアドレスはすでに使われています',
+    'auth/invalid-email': 'メールアドレスの形式が正しくありません',
+    'auth/wrong-password': 'パスワードが間違っています',
+    'auth/user-not-found': 'アカウントが見つかりません',
+    'auth/weak-password': 'パスワードは6文字以上にしてください',
+    'auth/popup-closed-by-user': 'ログインがキャンセルされました',
+    'auth/invalid-credential': 'メールアドレスまたはパスワードが間違っています',
+  };
+  return msgs[e.code] || 'エラーが発生しました: ' + e.message;
+}
+
+function showError(msg) {
+  const el = document.getElementById('loginError');
+  el.textContent = msg; el.style.display = 'block';
+}
+
+// Auth state listener
+onAuthStateChanged(auth, async (user) => {
+  document.getElementById('loadingScreen').style.display = 'none';
+  if(user) {
+    currentUser = user;
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    // Drawer info
+    const name = user.displayName || user.email.split('@')[0];
+    document.getElementById('drawerUser').textContent = name;
+    document.getElementById('drawerEmail').textContent = user.email;
+    if(user.photoURL) {
+      const av = document.getElementById('drawerAvatar');
+      av.src = user.photoURL; av.style.display = 'block';
+    }
+    await initUserData();
+    subscribeData();
+  } else {
+    currentUser = null;
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('loginError').style.display = 'none';
+    records = []; categories = [];
+  }
+});
+
+// ====== FIRESTORE ======
+async function initUserData() {
+  // Load categories - create defaults if none exist
+  const catDoc = await getDoc(doc(db, 'users', currentUser.uid, 'meta', 'categories'));
+  if(!catDoc.exists()) {
+    const defaultCats = getDefaultCategories();
+    await setDoc(doc(db, 'users', currentUser.uid, 'meta', 'categories'), { list: defaultCats });
+    categories = defaultCats;
+  } else {
+    categories = catDoc.data().list || [];
+  }
+}
+
+function subscribeData() {
+  // Subscribe to records
+  const recordsRef = collection(db, 'users', currentUser.uid, 'records');
+  unsubRecords = onSnapshot(recordsRef, (snap) => {
+    records = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderList();
+  });
+  // Subscribe to categories
+  const catRef = doc(db, 'users', currentUser.uid, 'meta', 'categories');
+  unsubCats = onSnapshot(catRef, (snap) => {
+    if(snap.exists()) {
+      categories = snap.data().list || [];
+      renderList();
+    }
+  });
+}
+
+async function saveCats() {
+  await setDoc(doc(db, 'users', currentUser.uid, 'meta', 'categories'), { list: categories });
+  showSync('✓ 同期完了');
+}
+
+// ====== SYNC BADGE ======
+function showSync(msg, isError=false) {
+  const el = document.getElementById('syncBadge');
+  el.textContent = msg;
+  el.className = 'sync-badge show' + (isError?' error':'');
+  setTimeout(()=>el.className='sync-badge', 2000);
+}
+
+// ====== DATE UTILS ======
+function getRokuyo(dateStr) {
+  const d = new Date(dateStr);
+  const base = new Date('2024-01-01');
+  const diff = Math.round((d - base) / 86400000);
+  return ROKUYO[((diff % 6) + 6) % 6];
+}
+
+function toWarekiShort(dateStr) {
+  const d = new Date(dateStr);
+  const y = d.getFullYear(), m = d.getMonth()+1;
+  let era='', ey=0;
+  if(y>=2019){era='令和';ey=y-2018;}
+  else if(y>=1989){era='平成';ey=y-1988;}
+  else{era='昭和';ey=y-1925;}
+  return `${y} (${era}${String(ey).padStart(2,'0')}) /${String(m).padStart(2,'0')}`;
+}
+
+function daysDiff(dateStr) {
+  const now = new Date(); now.setHours(0,0,0,0);
+  const d = new Date(dateStr); d.setHours(0,0,0,0);
+  return Math.round((d - now) / 86400000);
+}
+
+function formatElapsed(diff) {
+  const abs = Math.abs(diff);
+  if(diff===0) return '今日';
+  if(abs<31) return diff>0?`あと ${abs} 日`:`${abs} 日 経過`;
+  const months = Math.floor(abs/30.4375);
+  const days = Math.round(abs - months*30.4375);
+  if(months<12) return diff>0?`あと ${months} ヶ月 ${days} 日`:`${months} ヶ月 ${days} 日 経過`;
+  const years = Math.floor(months/12), rem = months%12;
+  return diff>0?`あと ${years} 年 ${rem} ヶ月 ${days} 日`:`${years} 年 ${rem} ヶ月 ${days} 日 経過`;
+}
+
+// ====== RENDER ======
+function getCat(id) { return categories.find(c=>c.id===id)||{name:'未分類',color:'#ccc',id:''}; }
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+window.renderList = function() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  let list = records.filter(r => {
+    if(q && !r.title.toLowerCase().includes(q) && !(r.memo||'').toLowerCase().includes(q)) return false;
+    if(filterCatIds && !filterCatIds.includes(r.catId)) return false;
+    return true;
+  });
+  list.sort((a,b)=>{
+    if(sortKey==='date') return sortDir==='desc'?b.date.localeCompare(a.date):a.date.localeCompare(b.date);
+    return sortDir==='asc'?a.title.localeCompare(b.title,'ja'):b.title.localeCompare(a.title,'ja');
+  });
+  const el = document.getElementById('recordList');
+  if(!list.length) {
+    el.innerHTML = `<div class="empty-state"><div class="es-icon">📭</div><h3>記録がありません</h3><p>右下の＋ボタンで追加してください</p></div>`;
+    return;
+  }
+  el.innerHTML = list.map(r=>{
+    const cat = getCat(r.catId);
+    const diff = daysDiff(r.date);
+    return `<div class="record-item" onclick="openEditModal('${r.id}')">
+      <div class="record-meta">
+        <div class="record-date-row">
+          <span class="date-badge" style="background:${cat.color}">${toWarekiShort(r.date)}</span>
+          <span class="rokuyo">${getRokuyo(r.date)}</span>
+          ${r.memo?'<span>📝</span>':''}
+        </div>
+        <div class="record-title">${escHtml(r.title)}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+        <div class="record-elapsed ${diff>0?'future':''}">${formatElapsed(diff)}</div>
+        <span class="chevron">›</span>
+      </div>
+    </div>`;
+  }).join('');
+};
+
+// ====== DRAWER ======
+window.toggleDrawer = ()=>{
+  document.getElementById('drawer').classList.toggle('open');
+  document.getElementById('drawerOverlay').classList.toggle('open');
+};
+window.closeDrawer = ()=>{
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawerOverlay').classList.remove('open');
+};
+
+// ====== RECORD MODAL ======
+window.openAddModal = ()=>{
+  editingId = null;
+  selectedCatId = categories[0]?.id||null;
+  document.getElementById('formTitle').value='';
+  document.getElementById('formDate').value=new Date().toISOString().split('T')[0];
+  document.getElementById('formMemo').value='';
+  document.getElementById('modalTitle').textContent='新規追加';
+  document.getElementById('modalActions').style.display='none';
+  updateFormCat();
+  document.getElementById('recordModal').classList.add('open');
+};
+
+window.openEditModal = (id)=>{
+  const r = records.find(x=>x.id===id);
+  if(!r) return;
+  editingId=id; selectedCatId=r.catId;
+  document.getElementById('formTitle').value=r.title;
+  document.getElementById('formDate').value=r.date;
+  document.getElementById('formMemo').value=r.memo||'';
+  document.getElementById('modalTitle').textContent=r.title;
+  document.getElementById('modalActions').style.display='flex';
+  updateFormCat();
+  document.getElementById('recordModal').classList.add('open');
+};
+
+window.closeRecordModal = ()=>document.getElementById('recordModal').classList.remove('open');
+
+window.saveRecord = async ()=>{
+  const title = document.getElementById('formTitle').value.trim();
+  const date = document.getElementById('formDate').value;
+  const memo = document.getElementById('formMemo').value.trim();
+  if(!title||!date) return alert('件名と日付を入力してください');
+  const data = { title, date, memo, catId: selectedCatId||'', updatedAt: Date.now() };
+  const id = editingId || 'r'+Date.now();
+  await setDoc(doc(db, 'users', currentUser.uid, 'records', id), data);
+  showSync('✓ 保存しました');
+  closeRecordModal();
+};
+
+window.deleteRecord = async ()=>{
+  if(!confirm('この記録を削除しますか？')) return;
+  await deleteDoc(doc(db, 'users', currentUser.uid, 'records', editingId));
+  showSync('🗑 削除しました');
+  closeRecordModal();
+};
+
+window.copyRecord = async ()=>{
+  const r = records.find(x=>x.id===editingId);
+  if(!r) return;
+  const id = 'r'+Date.now();
+  await setDoc(doc(db, 'users', currentUser.uid, 'records', id), {
+    ...r, id: undefined, title: r.title+' コピー', updatedAt: Date.now()
+  });
+  showSync('📋 コピーしました');
+  closeRecordModal();
+};
+
+function updateFormCat() {
+  const cat = getCat(selectedCatId);
+  document.getElementById('formCatDot').style.background=cat.color;
+  document.getElementById('formCatName').textContent=cat.name;
+}
+
+// ====== CAT PICKER ======
+window.openCatPicker = ()=>{
+  document.getElementById('catPickerList').innerHTML = categories.map(c=>`
+    <div class="cat-picker-item" onclick="selectCat('${c.id}')">
+      <div class="cat-dot" style="background:${c.color}"></div>
+      <span>${escHtml(c.name)}</span>
+      ${c.id===selectedCatId?'<span class="cp-check">✓</span>':''}
+    </div>`).join('');
+  document.getElementById('catPicker').classList.add('open');
+};
+window.closeCatPicker = ()=>document.getElementById('catPicker').classList.remove('open');
+window.selectCat = (id)=>{ selectedCatId=id; updateFormCat(); closeCatPicker(); };
+
+// ====== CAT FILTER ======
+window.openCatFilter = ()=>{ renderCatFilter(); document.getElementById('catFilterModal').classList.add('open'); };
+window.closeCatFilter = ()=>{ document.getElementById('catFilterModal').classList.remove('open'); renderList(); };
+
+function renderCatFilter() {
+  const allChecked = filterCatIds===null;
+  document.getElementById('catFilterList').innerHTML =
+    `<div class="cfm-item" onclick="toggleCatFilter(null)">
+      <span style="font-size:14px">すべてのカテゴリー</span>
+      ${allChecked?'<span class="cfm-check">✓</span>':''}
+    </div>` + categories.map(c=>`
+    <div class="cfm-item" onclick="toggleCatFilter('${c.id}')">
+      <div class="cat-dot" style="background:${c.color}"></div>
+      <span>${escHtml(c.name)}</span>
+      ${(allChecked||(filterCatIds&&filterCatIds.includes(c.id)))?'<span class="cfm-check">✓</span>':''}
+    </div>`).join('');
+}
+
+window.toggleCatFilter = (id)=>{
+  if(id===null){ filterCatIds=null; }
+  else {
+    if(filterCatIds===null) filterCatIds=categories.map(c=>c.id);
+    const i=filterCatIds.indexOf(id);
+    if(i>=0) filterCatIds.splice(i,1); else filterCatIds.push(id);
+    if(filterCatIds.length===categories.length) filterCatIds=null;
+  }
+  renderCatFilter();
+};
+
+// ====== CAT MANAGE ======
+window.openCatManage = ()=>{ renderCatManage(); document.getElementById('catManageModal').classList.add('open'); };
+window.closeCatManage = ()=>document.getElementById('catManageModal').classList.remove('open');
+
+function renderCatManage() {
+  document.getElementById('catManageList').innerHTML = categories.map(c=>`
+    <div class="cat-manage-item">
+      <div class="color-swatch" style="background:${c.color}" onclick="openColorPicker('${c.id}',event)"></div>
+      <input class="form-input" style="flex:1" value="${escHtml(c.name)}" onchange="renameCat('${c.id}',this.value)">
+      <button class="btn-del-cat" onclick="deleteCat('${c.id}')">🗑</button>
+    </div>`).join('');
+}
+
+window.addNewCategory = async ()=>{
+  const name = prompt('新しいカテゴリー名：');
+  if(!name||!name.trim()) return;
+  categories.push({id:'cat'+Date.now(), name:name.trim(), color:'#7ec832'});
+  await saveCats(); renderCatManage();
+};
+
+window.renameCat = async (id, name)=>{
+  const c=categories.find(x=>x.id===id);
+  if(c){ c.name=name.trim(); await saveCats(); }
+};
+
+window.deleteCat = async (id)=>{
+  if(!confirm('このカテゴリーを削除しますか？')) return;
+  categories=categories.filter(c=>c.id!==id);
+  await saveCats(); renderCatManage();
+};
+
+// ====== COLOR PICKER ======
+window.openColorPicker = (catId, event)=>{
+  colorPickerTarget=catId;
+  const cat=getCat(catId);
+  const popup=document.getElementById('colorPickerPopup');
+  popup.innerHTML=COLORS.map(c=>`<div class="cp-color ${c===cat.color?'selected':''}" style="background:${c}" onclick="setCatColor('${c}')"></div>`).join('');
+  popup.classList.add('open');
+  const rect=event.target.getBoundingClientRect();
+  popup.style.top=(rect.bottom+8)+'px';
+  popup.style.left=Math.min(rect.left, window.innerWidth-210)+'px';
+  setTimeout(()=>document.addEventListener('click',closeCPOnce,{once:true}),10);
+};
+function closeCPOnce(){ document.getElementById('colorPickerPopup').classList.remove('open'); }
+window.setCatColor = async (color)=>{
+  const c=categories.find(x=>x.id===colorPickerTarget);
+  if(c){ c.color=color; await saveCats(); renderCatManage(); }
+};
+
+// ====== SORT ======
+window.openSortModal = ()=>document.getElementById('sortModal').classList.add('open');
+window.setSort = (key, dir)=>{
+  sortKey=key; sortDir=dir;
+  ['date-desc','date-asc','title-asc','title-desc'].forEach(k=>{
+    document.getElementById('sort-'+k).style.display=k===`${key}-${dir}`?'':'none';
+  });
+  document.getElementById('sortLabel1').textContent=key==='date'?'年、月、日':'件名';
+  document.getElementById('sortLabel2').textContent=dir==='desc'?'降順':'昇順';
+  document.getElementById('sortModal').classList.remove('open');
+  renderList();
+};
+
+// ====== LOGIN UI ======
+window.switchTab = (tab)=>{
+  document.querySelectorAll('.login-tab').forEach((t,i)=>t.classList.toggle('active',(i===0&&tab==='login')||(i===1&&tab==='register')));
+  document.getElementById('loginForm').style.display=tab==='login'?'':'none';
+  document.getElementById('registerForm').style.display=tab==='register'?'':'none';
+  document.getElementById('loginError').style.display='none';
+};
+
+// ====== EXPORT ======
+window.exportData = ()=>{
+  const csv=['日付,件名,カテゴリー,メモ',...records.map(r=>{
+    const cat=getCat(r.catId);
+    return `"${r.date}","${r.title}","${cat.name}","${(r.memo||'').replace(/"/g,'""')}"`;
+  })].join('\n');
+  const blob=new Blob(['\ufeff'+csv],{type:'text/csv'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`my-history-pro_${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+};
+
+// ====== DEFAULT CATEGORIES ======
+function getDefaultCategories() {
+  return [
+    {id:'cat1',name:'個人輸入',color:'#f5c800'},
+    {id:'cat2',name:'車関連',color:'#2563eb'},
+    {id:'cat3',name:'エクシーガ',color:'#5b9af5'},
+    {id:'cat4',name:'パソコン関連',color:'#f5c800'},
+    {id:'cat5',name:'趣味関連',color:'#22c55e'},
+    {id:'cat6',name:'生活関連',color:'#ccf024'},
+    {id:'cat7',name:'家族関連',color:'#22d3ee'},
+    {id:'cat8',name:'空撮',color:'#84cc16'},
+    {id:'cat9',name:'投資',color:'#ef4444'},
+    {id:'cat10',name:'友人',color:'#2563eb'},
+    {id:'cat11',name:'自主トレーニング',color:'#84cc16'},
+  ];
+}
+
+</script>
+</body>
+</html>
