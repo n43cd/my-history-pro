@@ -482,6 +482,7 @@
     <button class="drawer-item" onclick="closeDrawer()"><span class="di-icon">📋</span>履歴</button>
     <button class="drawer-item" onclick="openCatManage(); closeDrawer();"><span class="di-icon">🗂️</span>カテゴリー編集</button>
     <button class="drawer-item" onclick="exportData(); closeDrawer();"><span class="di-icon">📤</span>エクスポート</button>
+    <button class="drawer-item" onclick="openImport(); closeDrawer();"><span class="di-icon">📥</span>CSVインポート</button>
     <div class="drawer-sep"></div>
     <button class="drawer-item" onclick="doLogout()"><span class="di-icon">🚪</span>ログアウト</button>
     <div style="padding:14px 20px;font-size:12px;color:#aaa">Ver. 2.0.0 (Firebase)</div>
@@ -576,6 +577,32 @@
     </div>
     <div class="sort-option" onclick="setSort('title','desc')">
       <span>件名（降順）</span><span class="sort-check" id="sort-title-desc" style="display:none">✓</span>
+    </div>
+  </div>
+</div>
+
+<!-- CSV Import Modal -->
+<div class="modal-overlay" id="importModal" onclick="if(event.target===this)closeImport()">
+  <div class="modal">
+    <div class="modal-header">
+      <button class="btn-modal-back" onclick="closeImport()">✕</button>
+      <h2>CSVインポート</h2>
+      <div style="width:60px"></div>
+    </div>
+    <div class="form-section">
+      <div style="background:#f0f4ff;border-radius:12px;padding:16px;margin-bottom:20px;font-size:13px;line-height:1.8;color:#444">
+        <strong>📋 CSVファイルの形式：</strong><br>
+        列の順番：<strong>category, color, date, title, memo1, memo2, memo3</strong><br>
+        日付形式：<strong>YYYY/MM/DD</strong>（例：2026/02/07）<br>
+        1行目はヘッダー行として無視されます
+      </div>
+      <div style="border:2px dashed var(--border);border-radius:12px;padding:32px;text-align:center;cursor:pointer;background:var(--surface2)" onclick="document.getElementById('csvFileInput').click()">
+        <div style="font-size:36px;margin-bottom:8px">📂</div>
+        <div style="font-size:15px;font-weight:700;margin-bottom:4px">タップしてCSVを選択</div>
+        <div style="font-size:12px;color:var(--text2)">またはドラッグ＆ドロップ</div>
+        <input type="file" id="csvFileInput" accept=".csv" style="display:none" onchange="handleCsvFile(event)">
+      </div>
+      <div id="importPreview" style="margin-top:16px"></div>
     </div>
   </div>
 </div>
@@ -1009,6 +1036,108 @@ window.exportData = ()=>{
   a.download=`my-history-pro_${new Date().toISOString().split('T')[0]}.csv`;
   a.click();
 };
+
+
+// ====== CSV IMPORT ======
+window.openImport = ()=>{
+  document.getElementById('importPreview').innerHTML = '';
+  document.getElementById('csvFileInput').value = '';
+  document.getElementById('importModal').classList.add('open');
+};
+window.closeImport = ()=>document.getElementById('importModal').classList.remove('open');
+
+window.handleCsvFile = (event)=>{
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (e)=>{ parseCsv(e.target.result); };
+  reader.readAsText(file, 'UTF-8');
+};
+
+function parseCsvLine(line) {
+  const result = [];
+  let cur = '', inQuote = false;
+  for(let i=0;i<line.length;i++) {
+    const c = line[i];
+    if(c==='"' && inQuote && line[i+1]==='"') { cur+='"'; i++; }
+    else if(c==='"') { inQuote=!inQuote; }
+    else if(c===',' && !inQuote) { result.push(cur); cur=''; }
+    else { cur+=c; }
+  }
+  result.push(cur);
+  return result;
+}
+
+function parseCsv(text) {
+  const lines = text.split(/\r?\n/).filter(l=>l.trim());
+  if(lines.length < 2) return showImportError('データが見つかりません');
+  const rows = lines.slice(1);
+  const parsed = [];
+  for(const line of rows) {
+    const cols = parseCsvLine(line);
+    if(cols.length < 4) continue;
+    const catName = (cols[0]||'').trim();
+    const color = (cols[1]||'#7ec832').trim();
+    const dateRaw = (cols[2]||'').trim().replace(/\//g,'-');
+    const title = (cols[3]||'').trim();
+    const memo = [cols[4]||'',cols[5]||'',cols[6]||''].map(s=>s.trim()).filter(Boolean).join('\n');
+    if(!title||!dateRaw) continue;
+    let cat = categories.find(c=>c.name===catName);
+    if(!cat && catName) {
+      cat = {id:'cat'+Date.now()+Math.random().toString(36).slice(2,6), name:catName, color:color};
+      categories.push(cat);
+    }
+    parsed.push({
+      id:'r'+Date.now()+Math.random().toString(36).slice(2,8),
+      title, date:dateRaw, memo, catId:cat?cat.id:''
+    });
+  }
+  showImportPreview(parsed);
+}
+
+function showImportPreview(parsed) {
+  const el = document.getElementById('importPreview');
+  if(!parsed.length) { el.innerHTML='<div style="color:var(--accent2);text-align:center;padding:16px">読み込めるデータがありませんでした</div>'; return; }
+  const rows = parsed.map(r=>{
+    const cat = getCat(r.catId);
+    return `<div style="padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px">
+      <span style="background:${cat.color};border-radius:4px;padding:1px 6px;font-size:11px;margin-right:6px">${escHtml(cat.name)}</span>
+      ${escHtml(r.date)} ${escHtml(r.title)}
+    </div>`;
+  }).join('');
+  el.innerHTML = `
+    <div style="background:#f0fff4;border-radius:12px;padding:14px;margin-bottom:12px;font-size:14px">
+      ✅ <strong>${parsed.length}件</strong>のデータが見つかりました
+    </div>
+    <div style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;margin-bottom:16px">${rows}</div>
+    <button onclick="doImport()" style="width:100%;padding:14px;background:var(--accent);color:white;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:'Noto Sans JP',sans-serif">📥 インポート実行</button>
+  `;
+  el._importData = parsed;
+}
+
+function showImportError(msg) {
+  document.getElementById('importPreview').innerHTML = `<div style="color:var(--accent2);text-align:center;padding:16px">${msg}</div>`;
+}
+
+window.doImport = async ()=>{
+  const el = document.getElementById('importPreview');
+  const parsed = el._importData;
+  if(!parsed||!parsed.length) return;
+  try {
+    await saveCats();
+    for(const r of parsed) {
+      await setDoc(doc(db,'users',currentUser.uid,'records',r.id),{
+        title:r.title, date:r.date, memo:r.memo, catId:r.catId, updatedAt:Date.now()
+      });
+    }
+    showSync('✅ '+parsed.length+'件インポート完了');
+    closeImport();
+    alert(parsed.length+'件のデータをインポートしました！');
+  } catch(e) {
+    showImportError('インポートに失敗しました: '+e.message);
+  }
+};
+
 
 // ====== DEFAULT CATEGORIES ======
 function getDefaultCategories() {
