@@ -900,7 +900,7 @@ window.copyRecord = async ()=>{
   if(!r) return;
   const id = 'r'+Date.now();
   await setDoc(doc(db, 'users', currentUser.uid, 'records', id), {
-    ...r, id: undefined, title: r.title+' コピー', updatedAt: Date.now()
+    title: r.title+' コピー',     date: r.date,     memo: r.memo||'',     catId: r.catId||'',     updatedAt: Date.now()
   });
   showSync('📋 コピーしました');
   closeRecordModal();
